@@ -11,6 +11,16 @@
 > 收集与使用需遵守《中华人民共和国个人信息保护法》《网络安全法》等法律法规，并取得信息主体的授权（学校场景下应取得教职工/车主的知情同意，并做到最小必要、限定用途）。
 > 因使用不当造成的后果由使用者自行承担。
 
+## 下载
+
+| 渠道 | 链接 |
+| --- | --- |
+| GitHub Release（APK 直链） | <https://github.com/jaspermzx/chepai-chaxun/releases/latest> |
+| Gitee 镜像仓库 | <https://gitee.com/jaspermzx/chepai-chaxun> |
+| GitHub 镜像仓库 | <https://github.com/jaspermzx/chepai-chaxun> |
+
+当前版本 `v1.0.0`，APK 为 debug 签名，安装包 SHA-256：`b183bdeea64955fa4c01b68dbfde1a3b6280d1694e87a32bb9ff97db53d6b66f`。
+
 ## 一、功能
 
 | 能力 | 说明 |
