@@ -1,0 +1,8 @@
+# 统一换行符，避免 Windows 下把 gradlew 弄成 CRLF 导致 Linux/macOS 构建失败
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.jar binary
+*.apk binary
