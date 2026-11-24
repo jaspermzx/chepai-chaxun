@@ -88,6 +88,8 @@ echo 'sdk.dir=/path/to/Android/Sdk' > local.properties
 
 用 Android Studio 打开工程直接 Run 也可以。
 
+打包发布（改版本号 → 构建 → 打 tag → 两个平台建发行版挂 APK → 校验）的完整步骤见 **[RELEASE.md](RELEASE.md)**，里面也记了这台机器上踩过的坑。
+
 ## 六、安装与使用
 
 1. 把 `app-debug.apk` 传到手机安装（需允许「安装未知来源应用」）。
