@@ -8,10 +8,12 @@
     <string name="status_scanning">正在识别…</string>
     <string name="status_found">已登记车辆</string>
     <string name="status_not_found">本地库中无此车牌</string>
+    <string name="status_found_fuzzy">已登记车辆 · 模糊匹配</string>
 
     <string name="label_owner">车主</string>
     <string name="label_phone">手机</string>
     <string name="empty_value">—</string>
+    <string name="no_info">无信息</string>
 
     <string name="btn_call">拨打</string>
     <string name="btn_manual">手动输入</string>
@@ -19,31 +21,39 @@
 
     <string name="hint_not_found">可点右上角进入「车辆库」录入该车牌，或手动输入重试。</string>
     <string name="hint_scan">车牌尽量占满取景框，光线不足时可开补光。</string>
+    <string name="hint_no_partial_match">本地库中没有包含「%1$s」的车牌，换个关键字或检查录入。</string>
 
     <string name="perm_title">需要相机权限</string>
     <string name="perm_desc">识别车牌需要使用后置摄像头。应用不联网，照片不会离开本机。</string>
     <string name="perm_grant">开启相机</string>
 
     <string name="manual_title">手动输入车牌</string>
-    <string name="manual_hint">例如 粤B12345</string>
-    <string name="manual_invalid">车牌格式不正确</string>
+    <string name="manual_hint">可只输几位，如 12345、B12、粤B123</string>
+    <string name="manual_invalid">请输入车牌或其中几位数字/字母</string>
+    <string name="manual_too_short">至少输入 2 位才能查询</string>
+    <string name="plate_hint_dialog">例如 粤B12345（需完整车牌）</string>
+    <string name="chooser_title">匹配到 %1$d 辆车，请选择</string>
     <string name="ok">确定</string>
     <string name="cancel">取消</string>
 
     <string name="empty_library">车辆库还是空的，点右上角「新增」或「导入」。</string>
-    <string name="search_hint">搜索车牌 / 姓名 / 手机号</string>
+    <string name="empty_search">没有匹配的记录，换个关键字试试。</string>
+    <string name="search_hint">搜车牌 / 姓名 / 手机号，车牌可只输几位</string>
     <string name="dialog_add">新增车辆</string>
     <string name="dialog_edit">编辑车辆</string>
     <string name="field_plate">车牌号</string>
     <string name="field_owner">车主姓名</string>
-    <string name="field_phone">手机号</string>
+    <string name="field_phone">手机号（可留空）</string>
     <string name="save">保存</string>
     <string name="delete">删除</string>
     <string name="delete_confirm">删除 %1$s 的档案？</string>
     <string name="import_title">导入 CSV</string>
     <string name="import_done">已导入 %1$d 条</string>
+    <string name="import_summary">导入 %1$d 条（新增 %2$d，更新 %3$d）</string>
+    <string name="import_no_phone_note">，其中 %1$d 条无手机号</string>
+    <string name="import_skipped_note">；跳过 %1$d 行（车牌或姓名无法识别）</string>
     <string name="import_empty">没有解析到有效数据，请检查格式：车牌号,姓名,手机号</string>
-    <string name="import_template">CSV 格式：每行「车牌号,姓名,手机号」，编码 UTF-8。</string>
+    <string name="import_template">CSV 格式：每行「车牌号,姓名,手机号」，手机号可留空；编码 UTF-8。</string>
     <string name="toast_seeded">已写入 3 条示例数据，可在车辆库中修改或删除</string>
     <string name="count_fmt">共 %1$d 条</string>
     <string name="no_camera">未检测到可用摄像头</string>

@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -103,7 +104,12 @@ public class VehicleListActivity extends AppCompatActivity {
                 items.addAll(data);
                 adapter.notifyDataSetChanged();
                 tvCount.setText(getString(R.string.count_fmt, data.size()));
-                tvEmpty.setVisibility(data.isEmpty() ? View.VISIBLE : View.GONE);
+                if (data.isEmpty()) {
+                    tvEmpty.setText(keyword.isEmpty() ? R.string.empty_library : R.string.empty_search);
+                    tvEmpty.setVisibility(View.VISIBLE);
+                } else {
+                    tvEmpty.setVisibility(View.GONE);
+                }
             });
         });
     }
@@ -135,17 +141,14 @@ public class VehicleListActivity extends AppCompatActivity {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String plate = PlateParser.fromUserInput(etPlate.getText().toString());
             String owner = etOwner.getText().toString().trim();
-            String phone = etPhone.getText().toString().trim();
+            // 手机号允许为空：历史名单里存在只登记姓名的车主
+            String phone = CsvImporter.cleanPhone(etPhone.getText().toString());
             if (!PlateParser.isValid(plate)) {
                 etPlate.setError(getString(R.string.manual_invalid));
                 return;
             }
             if (owner.isEmpty()) {
                 etOwner.setError(getString(R.string.field_owner));
-                return;
-            }
-            if (phone.isEmpty()) {
-                etPhone.setError(getString(R.string.field_phone));
                 return;
             }
             final Vehicle vehicle = new Vehicle(plate, owner, phone);
@@ -204,15 +207,24 @@ public class VehicleListActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show());
                 return;
             }
-            List<Vehicle> parsed = CsvImporter.parse(text);
-            if (parsed.isEmpty()) {
+            final CsvImporter.Result parsed = CsvImporter.parse(text);
+            if (parsed.items.isEmpty()) {
                 runOnUiThread(() -> Toast.makeText(this, R.string.import_empty,
                         Toast.LENGTH_LONG).show());
                 return;
             }
-            final int n = store.upsertAll(parsed);
+            final VehicleStore.ImportStats stats = store.upsertAllCounted(parsed.items);
             runOnUiThread(() -> {
-                Toast.makeText(this, getString(R.string.import_done, n), Toast.LENGTH_LONG).show();
+                StringBuilder msg = new StringBuilder(
+                        getString(R.string.import_summary, parsed.items.size(),
+                                stats.inserted, stats.updated));
+                if (parsed.noPhoneCount > 0) {
+                    msg.append(getString(R.string.import_no_phone_note, parsed.noPhoneCount));
+                }
+                if (parsed.skippedCount > 0) {
+                    msg.append(getString(R.string.import_skipped_note, parsed.skippedCount));
+                }
+                Toast.makeText(this, msg.toString(), Toast.LENGTH_LONG).show();
                 reload();
             });
         });
@@ -288,7 +300,13 @@ public class VehicleListActivity extends AppCompatActivity {
             Vehicle v = getItem(position);
             holder.plate.setText(PlateParser.format(v.plate));
             holder.owner.setText(v.owner);
-            holder.phone.setText(v.phone);
+            if (v.hasPhone()) {
+                holder.phone.setText(v.phone);
+                holder.phone.setTextColor(ContextCompat.getColor(parent.getContext(), R.color.text_secondary));
+            } else {
+                holder.phone.setText(R.string.no_info);
+                holder.phone.setTextColor(ContextCompat.getColor(parent.getContext(), R.color.text_tertiary));
+            }
             return convertView;
         }
     }

@@ -308,15 +308,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showFound(VehicleStore.Match match) {
-        tvPlate.setText(PlateParser.format(match.matchedPlate));
+        showVehicle(match.matchedPlate, match.vehicle, false);
+    }
+
+    /**
+     * 展示一条命中的车辆。手机号缺失时保留原布局，只把手机号位显示为「无信息」，
+     * 并隐藏拨打按钮（没有号码可拨）。
+     */
+    private void showVehicle(String plate, Vehicle vehicle, boolean fuzzy) {
+        tvPlate.setText(PlateParser.format(plate));
         tvPlate.setBackgroundResource(R.drawable.bg_plate);
         tvPlate.setTextColor(0xFFFFFFFF);
-        tvOwner.setText(match.vehicle.owner);
-        tvPhone.setText(match.vehicle.phone);
-        currentPhone = match.vehicle.phone;
-        btnCall.setVisibility(View.VISIBLE);
+        tvOwner.setText(vehicle.owner);
+        if (vehicle.hasPhone()) {
+            tvPhone.setText(vehicle.phone);
+            tvPhone.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+            currentPhone = vehicle.phone;
+            btnCall.setVisibility(View.VISIBLE);
+        } else {
+            tvPhone.setText(R.string.no_info);
+            tvPhone.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary));
+            currentPhone = null;
+            btnCall.setVisibility(View.GONE);
+        }
         tvHint.setVisibility(View.GONE);
-        setStatus(getString(R.string.status_found), R.color.success);
+        setStatus(getString(fuzzy ? R.string.status_found_fuzzy : R.string.status_found),
+                R.color.success);
     }
 
     private void showNotFound(String candidate) {
@@ -325,10 +342,26 @@ public class MainActivity extends AppCompatActivity {
         tvPlate.setTextColor(0xFF9FB2C8);
         tvOwner.setText(R.string.empty_value);
         tvPhone.setText(R.string.empty_value);
+        tvPhone.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
         currentPhone = null;
         btnCall.setVisibility(View.GONE);
         tvHint.setVisibility(View.VISIBLE);
         tvHint.setText(R.string.hint_not_found);
+        setStatus(getString(R.string.status_not_found), R.color.accent);
+    }
+
+    /** 部分车牌查不到时的展示：把输入的片段本身显示出来，不要伪装成完整车牌。 */
+    private void showPartialMiss(String fragment) {
+        tvPlate.setText(fragment);
+        tvPlate.setBackgroundResource(R.drawable.bg_plate_empty);
+        tvPlate.setTextColor(0xFF9FB2C8);
+        tvOwner.setText(R.string.empty_value);
+        tvPhone.setText(R.string.empty_value);
+        tvPhone.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        currentPhone = null;
+        btnCall.setVisibility(View.GONE);
+        tvHint.setVisibility(View.VISIBLE);
+        tvHint.setText(getString(R.string.hint_no_partial_match, fragment));
         setStatus(getString(R.string.status_not_found), R.color.accent);
     }
 
@@ -381,27 +414,86 @@ public class MainActivity extends AppCompatActivity {
                 .create();
         dialog.show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String plate = PlateParser.fromUserInput(et.getText().toString());
-            if (!PlateParser.isValid(plate)) {
+            // 只保留车牌可能出现的字符，方便用户顺手粘贴「粤B·12345」「粤b 12345」这类写法
+            String query = PlateParser.normalize(et.getText().toString());
+            if (query.isEmpty()) {
                 et.setError(getString(R.string.manual_invalid));
                 return;
             }
+            if (PlateParser.isValid(query)) {
+                dialog.dismiss();
+                lookupFullPlate(query);
+                return;
+            }
+            if (query.length() < 2) {
+                et.setError(getString(R.string.manual_too_short));
+                return;
+            }
             dialog.dismiss();
-            holdUntil = 0;
-            bgExecutor.execute(() -> {
-                final VehicleStore.Match match = store.findByVariants(plate);
-                runOnUiThread(() -> {
-                    currentPlate = plate;
-                    if (match != null) {
-                        showFound(match);
-                        holdUntil = System.currentTimeMillis() + HOLD_FOUND_MS;
-                    } else {
-                        showNotFound(plate);
-                        holdUntil = System.currentTimeMillis() + HOLD_MISS_MS;
-                    }
-                });
+            lookupPartial(query);
+        });
+    }
+
+    /** 完整车牌：先精确查，再按 OCR 混淆变体查。 */
+    private void lookupFullPlate(String plate) {
+        holdUntil = 0;
+        bgExecutor.execute(() -> {
+            final VehicleStore.Match match = store.findByVariants(plate);
+            runOnUiThread(() -> {
+                currentPlate = plate;
+                if (match != null) {
+                    showFound(match);
+                    holdUntil = System.currentTimeMillis() + HOLD_FOUND_MS;
+                } else {
+                    showNotFound(plate);
+                    holdUntil = System.currentTimeMillis() + HOLD_MISS_MS;
+                }
             });
         });
+    }
+
+    /**
+     * 只输入部分车牌（如 12345、B12、粤B123）：按片段模糊查。
+     * 唯一命中直接展示；多条命中让用户选；零命中给出提示。
+     */
+    private void lookupPartial(String fragment) {
+        holdUntil = 0;
+        bgExecutor.execute(() -> {
+            final List<Vehicle> hits = store.searchByPlateFragment(fragment, 30);
+            runOnUiThread(() -> {
+                if (hits.isEmpty()) {
+                    currentPlate = fragment;
+                    showPartialMiss(fragment);
+                    holdUntil = System.currentTimeMillis() + HOLD_MISS_MS;
+                } else if (hits.size() == 1) {
+                    Vehicle v = hits.get(0);
+                    currentPlate = v.plate;
+                    showVehicle(v.plate, v, true);
+                    holdUntil = System.currentTimeMillis() + HOLD_FOUND_MS;
+                } else {
+                    showFragmentChooser(fragment, hits);
+                }
+            });
+        });
+    }
+
+    private void showFragmentChooser(String fragment, List<Vehicle> hits) {
+        String[] labels = new String[hits.size()];
+        for (int i = 0; i < hits.size(); i++) {
+            Vehicle v = hits.get(i);
+            labels[i] = PlateParser.format(v.plate) + "  " + v.owner
+                    + (v.hasPhone() ? "" : "（无手机号）");
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.chooser_title, hits.size()))
+                .setItems(labels, (d, which) -> {
+                    Vehicle v = hits.get(which);
+                    currentPlate = v.plate;
+                    showVehicle(v.plate, v, true);
+                    holdUntil = System.currentTimeMillis() + HOLD_FOUND_MS;
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
     }
 
     private void dial(String phone) {

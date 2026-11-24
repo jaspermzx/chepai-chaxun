@@ -20,7 +20,7 @@
         android:layout_height="48dp"
         android:layout_marginTop="6dp"
         android:background="@drawable/bg_input"
-        android:hint="@string/manual_hint"
+        android:hint="@string/plate_hint_dialog"
         android:imeOptions="actionNext"
         android:inputType="textVisiblePassword"
         android:maxLines="1"

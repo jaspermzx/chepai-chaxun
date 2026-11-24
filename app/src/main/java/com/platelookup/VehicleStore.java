@@ -130,20 +130,88 @@ public class VehicleStore extends SQLiteOpenHelper {
 
     /** 批量写入，单事务提交；返回实际写入条数。 */
     public int upsertAll(List<Vehicle> items) {
+        ImportStats stats = upsertAllCounted(items);
+        return stats.inserted + stats.updated;
+    }
+
+    /** 批量写入并区分新增/更新，便于导入后如实反馈。 */
+    public ImportStats upsertAllCounted(List<Vehicle> items) {
+        ImportStats stats = new ImportStats();
         if (items == null || items.isEmpty()) {
-            return 0;
+            return stats;
         }
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
             for (Vehicle v : items) {
+                boolean exists = exists(db, v.plate);
                 db.insertWithOnConflict(TABLE, null, toValues(v), SQLiteDatabase.CONFLICT_REPLACE);
+                if (exists) {
+                    stats.updated++;
+                } else {
+                    stats.inserted++;
+                }
             }
             db.setTransactionSuccessful();
-            return items.size();
         } finally {
             db.endTransaction();
         }
+        return stats;
+    }
+
+    private boolean exists(SQLiteDatabase db, String plate) {
+        Cursor c = db.rawQuery("SELECT 1 FROM " + TABLE + " WHERE " + COL_PLATE + "=? LIMIT 1",
+                new String[]{plate});
+        try {
+            return c.moveToFirst();
+        } finally {
+            c.close();
+        }
+    }
+
+    /**
+     * 按车牌片段模糊查询：手动输入只记得几位数时用。
+     * 结果按「完全相同 > 前缀命中 > 包含命中」排序，最多返回 limit 条。
+     */
+    public List<Vehicle> searchByPlateFragment(String fragment, int limit) {
+        List<Vehicle> list = new ArrayList<>();
+        String f = PlateParser.normalize(fragment);
+        if (f.isEmpty()) {
+            return list;
+        }
+        Cursor c = getReadableDatabase().query(TABLE,
+                new String[]{COL_PLATE, COL_OWNER, COL_PHONE},
+                COL_PLATE + " LIKE ?", new String[]{"%" + f + "%"},
+                null, null, COL_PLATE + " ASC", String.valueOf(limit));
+        try {
+            while (c.moveToNext()) {
+                list.add(new Vehicle(c.getString(0), c.getString(1), c.getString(2)));
+            }
+        } finally {
+            c.close();
+        }
+        final String key = f;
+        list.sort((a, b) -> rank(a.plate, key) - rank(b.plate, key));
+        return list;
+    }
+
+    private static int rank(String plate, String key) {
+        if (plate.equals(key)) {
+            return 0;
+        }
+        if (plate.startsWith(key)) {
+            return 1;
+        }
+        if (plate.endsWith(key)) {
+            return 2;
+        }
+        return 3;
+    }
+
+    /** 导入统计。 */
+    public static class ImportStats {
+        public int inserted;
+        public int updated;
     }
 
     public boolean delete(String plate) {
@@ -168,6 +236,8 @@ public class VehicleStore extends SQLiteOpenHelper {
         demo.add(new Vehicle("粤B12345", "张伟", "13800138000"));
         demo.add(new Vehicle("京A88888", "李娜", "13900139000"));
         demo.add(new Vehicle("沪C66666", "王强", "13700137000"));
+        // 示例：历史上以工号代替姓名、且没登记手机号的记录（第二版可正常查询与展示）
+        demo.add(new Vehicle("苏E8K3M9", "236", ""));
         upsertAll(demo);
     }
 }
