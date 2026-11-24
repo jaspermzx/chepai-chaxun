@@ -19,7 +19,8 @@
 | Gitee 镜像仓库 | <https://gitee.com/jaspermzx/chepai-chaxun> |
 | GitHub 镜像仓库 | <https://github.com/jaspermzx/chepai-chaxun> |
 
-当前版本 `v1.1.0`，APK 为 debug 签名，校验值见下方「验证记录」。
+当前版本 **v1.1.0**（2026-11-24）。APK 为 debug 签名，45.8 MB，SHA-256：
+`e6443b412be941da721aa7c03f73da003a18bffc7cf779acd44cb629ee4034e7`
 
 ## 一、功能
 
